@@ -154,8 +154,7 @@ def build_plain_formatter(values):
 
 
 def apply_axis_format(ax, values):
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Total energy (J)")
+    ax.set_xlabel("Tiempo (s)")
     ax.grid(True, which="both", alpha=0.2)
     ax.yaxis.set_major_formatter(build_plain_formatter(values))
     ax.ticklabel_format(axis="x", style="plain", useOffset=False)
@@ -194,10 +193,10 @@ def main():
     if args.relative:
         baseline = energies[0]
         values = (energies - baseline) / baseline if baseline != 0.0 else energies
-        ylabel = "Relative energy (E - E0) / E0"
+        ylabel = "Energía relativa (E - E0) / E0"
     else:
         values = energies
-        ylabel = "Total energy (J)"
+        ylabel = "Energía total (J)"
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(times, values, color="black", linewidth=1.5)

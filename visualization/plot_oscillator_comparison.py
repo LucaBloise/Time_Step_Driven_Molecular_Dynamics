@@ -7,6 +7,13 @@ import numpy as np
 from matplotlib.ticker import ScalarFormatter
 
 METHOD_ORDER = ["euler", "verlet", "beeman", "gear5"]
+LABELS = {
+    "euler": "Euler",
+    "verlet": "Verlet",
+    "beeman": "Beeman",
+    "gear5": "Gear 5",
+    "analytic": "Analítica",
+}
 
 
 def parse_header_value(value):
@@ -151,8 +158,8 @@ def compute_zoom_ylim(analytic_t, analytic_r_values, per_method, zoom_methods, s
 
 
 def apply_axis_format(ax):
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Position (m)")
+    ax.set_xlabel("Tiempo (s)")
+    ax.set_ylabel("Posición (m)")
     ax.grid(True, alpha=0.2)
     formatter = ScalarFormatter(useMathText=True)
     formatter.set_powerlimits((-3, 3))
@@ -262,9 +269,9 @@ def main():
 
     if args.full or not args.zoom:
         fig, ax = plt.subplots(figsize=(9, 5))
-        ax.plot(analytic_t, analytic_r_values, color="black", linewidth=2.0, label="analytic")
+        ax.plot(analytic_t, analytic_r_values, color="black", linewidth=2.0, label=LABELS["analytic"])
         for method in METHOD_ORDER:
-            ax.plot(per_method[method]["t"], per_method[method]["r"], label=method)
+            ax.plot(per_method[method]["t"], per_method[method]["r"], label=LABELS.get(method, method))
         apply_axis_format(ax)
         ax.legend(frameon=False)
         fig.tight_layout()
@@ -275,12 +282,12 @@ def main():
         fig, ax = plt.subplots(figsize=(9, 5))
         analytic_t_zoom = np.linspace(zoom_start, zoom_end, 2000)
         analytic_r_zoom = analytic_r(analytic_t_zoom, m, k, gamma, r0, v0)
-        ax.plot(analytic_t_zoom, analytic_r_zoom, color="black", linewidth=2.0, label="analytic")
+        ax.plot(analytic_t_zoom, analytic_r_zoom, color="black", linewidth=2.0, label=LABELS["analytic"])
         for method in zoom_methods:
             t = per_method[method]["t"]
             r = per_method[method]["r"]
             msk = (t >= zoom_start) & (t <= zoom_end)
-            ax.plot(t[msk], r[msk], label=method)
+            ax.plot(t[msk], r[msk], label=LABELS.get(method, method))
         ax.set_xlim(zoom_start, zoom_end)
         ax.margins(x=0.0, y=0.0)
         if zoom_ylim is not None:

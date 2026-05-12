@@ -7,6 +7,12 @@ import numpy as np
 from matplotlib.ticker import FuncFormatter, LogFormatterSciNotation
 
 METHOD_ORDER = ["euler", "verlet", "beeman", "gear5"]
+LABELS = {
+    "euler": "Euler",
+    "verlet": "Verlet",
+    "beeman": "Beeman",
+    "gear5": "Gear 5",
+}
 MARKERS = {
     "euler": "o",
     "verlet": "s",
@@ -66,8 +72,8 @@ def analytic_r(t, m, k, gamma, r0, v0):
 
 
 def apply_axis_format(ax, xticks):
-    ax.set_xlabel("dt (s)")
-    ax.set_ylabel("ECM position (m^2)")
+    ax.set_xlabel("Paso temporal dt (s)")
+    ax.set_ylabel("ECM posición (m^2)")
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.grid(True, which="both", alpha=0.2)
@@ -139,7 +145,7 @@ def main():
             continue
         dts = sorted(entries.keys(), reverse=True)
         ecms = [float(np.mean(entries[dt])) for dt in dts]
-        ax.plot(dts, ecms, marker=MARKERS.get(method, "o"), label=method)
+        ax.plot(dts, ecms, marker=MARKERS.get(method, "o"), label=LABELS.get(method, method))
         all_dts.update(dts)
 
         for dt, ecm in zip(dts, ecms):
