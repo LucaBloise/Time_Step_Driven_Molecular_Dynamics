@@ -3,16 +3,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 public class SimulationConfig {
-    private int n = 200;
+    private int n = 100;
     private double l = 80.0;
     private double r0 = 1.0;
     private double r = 1.0;
     private double m = 1.0;
     private double k = 1.0e3;
     private double v0 = 1.0;
-    private double tf = 500.0;
+    private double tf = 1500.0;
     private double dt = 0.001;
-    private double dt2 = -1.0;
+    private double dt2 = n/100.0;
     private long seed = -1L;
     private String outPath = null;
     private String eventsPath = null;
