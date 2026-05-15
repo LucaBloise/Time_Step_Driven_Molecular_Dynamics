@@ -13,6 +13,7 @@ import statistics
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 
@@ -27,6 +28,190 @@ def run_if_missing(script: Path, output_csv: Path, extra_args: list[str], cwd: P
     cmd = [sys.executable, str(script), *extra_args]
     print(f"Ejecutando: {' '.join(cmd)}")
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def fit_line(
+    x_values: Sequence[float], y_values: Sequence[float]
+) -> Tuple[float, float, float]:
+    if len(x_values) != len(y_values):
+        raise ValueError("x_values e y_values deben tener la misma longitud")
+    if len(x_values) < 2:
+        raise ValueError("Se necesitan al menos 2 puntos para un ajuste lineal")
+
+    mean_x = statistics.fmean(x_values)
+    mean_y = statistics.fmean(y_values)
+
+    var_x = 0.0
+    cov_xy = 0.0
+    for x_val, y_val in zip(x_values, y_values):
+        dx = x_val - mean_x
+        var_x += dx * dx
+        cov_xy += dx * (y_val - mean_y)
+
+    if var_x <= 1.0e-15:
+        slope = 0.0
+        intercept = mean_y
+    else:
+        slope = cov_xy / var_x
+        intercept = mean_y - slope * mean_x
+
+    ss_res = 0.0
+    ss_tot = 0.0
+    for x_val, y_val in zip(x_values, y_values):
+        estimate = intercept + slope * x_val
+        residual = y_val - estimate
+        ss_res += residual * residual
+
+        centered = y_val - mean_y
+        ss_tot += centered * centered
+
+    if ss_tot <= 1.0e-15:
+        r_squared = 1.0 if ss_res <= 1.0e-15 else 0.0
+    else:
+        r_squared = 1.0 - (ss_res / ss_tot)
+
+    return slope, intercept, r_squared
+
+
+def parse_tp4_events_to_cfc(events_path: Path) -> Tuple[List[float], List[int]]:
+    if not events_path.exists():
+        raise FileNotFoundError(f"No se encontro archivo de eventos en {events_path}")
+
+    times: List[float] = [0.0]
+    cfc_values: List[int] = [0]
+    cumulative = 0
+
+    with events_path.open("r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            try:
+                t_value = float(parts[0])
+                event = parts[2]
+            except (ValueError, IndexError):
+                continue
+
+            if event == "FRESH_TO_USED":
+                cumulative += 1
+                times.append(t_value)
+                cfc_values.append(cumulative)
+
+    if len(times) < 2:
+        raise ValueError(f"No se pudo reconstruir Cfc(t) desde {events_path}")
+
+    return times, cfc_values
+
+
+def read_first_run_dir_for_n(csv_path: Path, target_n: int) -> Path | None:
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            if int(row["n_particles"]) == target_n:
+                return Path(row["run_dir"])
+    return None
+
+
+def plot_tp4_cfc_combined(
+    series_data: Sequence[Tuple[int, Sequence[float], Sequence[int], float, float]],
+    output_path: Path,
+) -> None:
+
+    plt.rcParams.update(
+        {
+            "font.family": "DejaVu Sans",
+            "font.size": 18,
+            "axes.labelsize": 20,
+            "xtick.labelsize": 16,
+            "ytick.labelsize": 16,
+            "legend.fontsize": 15,
+        }
+    )
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    colors = ["#1f77b4", "#ff7f0e"]
+
+    for index, (n_value, times, cfc_values, slope, intercept) in enumerate(series_data):
+        color = colors[index % len(colors)]
+        x_values = [float(x) for x in times]
+        y_values = [float(y) for y in cfc_values]
+        fit_values = [intercept + slope * x for x in x_values]
+
+        ax.plot(
+            x_values,
+            y_values,
+            color=color,
+            linewidth=1.8,
+            label=f"N={n_value}",
+        )
+        ax.plot(
+            x_values,
+            fit_values,
+            color=color,
+            linewidth=2.0,
+            linestyle="--",
+            label="_nolegend_",
+        )
+
+    # Use fixed X-axis ticks from 0 to 1500 every 250.
+    fixed_ticks = list(range(0, 1501, 250))
+    ax.set_xlim(0.0, 1500.0)
+    ax.set_xticks(fixed_ticks)
+
+    ax.set_xlabel("Tiempo t (s)")
+    ax.set_ylabel(r"$C_{fc}(t)$")
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="upper left")
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=200)
+    plt.close(fig)
+    print(f"Figura de Cfc(t) guardada en {output_path}")
+
+
+def build_tp4_cfc_figures(
+    tp4_csv: Path,
+    tp4_root: Path,
+    output_dir: Path,
+) -> None:
+    series_data: List[Tuple[int, List[float], List[int], float, float]] = []
+
+    for n_value in (100, 700):
+        tp4_run_dir = read_first_run_dir_for_n(tp4_csv, n_value)
+
+        if tp4_run_dir is None:
+            print(f"Advertencia: no hay corrida representativa TP4 para N={n_value} en el CSV.")
+            continue
+
+        tp4_events = tp4_run_dir / "events.txt"
+
+        if not tp4_events.exists():
+            fallback_tp4 = tp4_root / "outputs" / "scanning_rate_tp4" / f"scanning_n{n_value}_rep1" / "events.txt"
+            if fallback_tp4.exists():
+                tp4_events = fallback_tp4
+
+        if not tp4_events.exists():
+            print(f"Advertencia: no se encontro events.txt de TP4 para N={n_value}.")
+            continue
+
+        times_tp4, cfc_tp4 = parse_tp4_events_to_cfc(tp4_events)
+        x_values = [float(x) for x in times_tp4]
+        y_values = [float(y) for y in cfc_tp4]
+        slope, intercept, _ = fit_line(x_values, y_values)
+        series_data.append((n_value, times_tp4, cfc_tp4, slope, intercept))
+
+    if not series_data:
+        print("Advertencia: no se pudo generar figura Cfc(t) porque faltan corridas de TP4.")
+        return
+
+    plot_tp4_cfc_combined(
+        series_data=series_data,
+        output_path=output_dir / "cfc_tp4_compare_n100_n700.png",
+    )
 
 
 def read_scanning_csv(csv_path: Path) -> list[tuple[int, float]]:
@@ -176,6 +361,12 @@ def main():
         help="Output comparison figure.",
     )
     parser.add_argument(
+        "--cfc-output-dir",
+        type=Path,
+        default=script_dir,
+        help="Directorio de salida para figuras Cfc(t) de TP4.",
+    )
+    parser.add_argument(
         "--force-run",
         action="store_true",
         help="Forzar la ejecucion aunque ya existan CSVs.",
@@ -223,6 +414,11 @@ def main():
         print(f"Usando CSV existente: {args.tp4_out}")
 
     plot_scanning_comparison(args.tp4_out, args.tp3_out, args.figure)
+    build_tp4_cfc_figures(
+        tp4_csv=args.tp4_out,
+        tp4_root=tp4_root,
+        output_dir=args.cfc_output_dir,
+    )
 
     print(f"Comparación generada: {args.figure}")
 
