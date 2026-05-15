@@ -66,4 +66,26 @@ public class OutputWriter {
         }
         writer.write(builder.toString());
     }
+
+    public static void writeMetadata(String propertiesPath, SimulationConfig config, long executionTimeMs)
+            throws IOException {
+        Path path = Paths.get(propertiesPath);
+        Files.createDirectories(path.getParent());
+        try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+            writer.write(String.format(Locale.US, "N=%d\n", config.getN()));
+            writer.write(String.format(Locale.US, "L=%.8f\n", config.getL()));
+            writer.write(String.format(Locale.US, "r0=%.8f\n", config.getR0()));
+            writer.write(String.format(Locale.US, "r=%.8f\n", config.getR()));
+            writer.write(String.format(Locale.US, "m=%.8f\n", config.getM()));
+            writer.write(String.format(Locale.US, "k=%.8f\n", config.getK()));
+            writer.write(String.format(Locale.US, "v0=%.8f\n", config.getV0()));
+            writer.write(String.format(Locale.US, "tf=%.8f\n", config.getTf()));
+            writer.write(String.format(Locale.US, "dt=%.8f\n", config.getDt()));
+            writer.write(String.format(Locale.US, "dt2=%.8f\n", config.getDt2()));
+            writer.write(String.format(Locale.US, "seed=%d\n", config.getSeed()));
+            writer.write(String.format(Locale.US, "execution_time_s=%.10f\n", executionTimeMs / 1000.0));
+            writer.write(String.format(Locale.US, "state_output=%s\n", !config.isNoState()));
+            writer.write(String.format(Locale.US, "events_output=%s\n", !config.isNoEvents()));
+        }
+    }
 }

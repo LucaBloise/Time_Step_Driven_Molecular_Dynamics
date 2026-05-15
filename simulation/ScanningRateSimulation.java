@@ -12,14 +12,34 @@ public class ScanningRateSimulation {
 
         SimulationState state = Initializer.initialize(config);
 
-        OutputWriter.ensureParentDir(config.getOutPath());
-        OutputWriter.ensureParentDir(config.getEventsPath());
+        BufferedWriter writer = null;
+        BufferedWriter events = null;
 
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(config.getOutPath()), StandardCharsets.US_ASCII);
-             BufferedWriter events = Files.newBufferedWriter(Paths.get(config.getEventsPath()), StandardCharsets.US_ASCII)) {
+        if (!config.isNoState()) {
+            OutputWriter.ensureParentDir(config.getOutPath());
+            writer = Files.newBufferedWriter(Paths.get(config.getOutPath()), StandardCharsets.US_ASCII);
             OutputWriter.writeHeader(writer, config);
+        }
+
+        if (!config.isNoEvents()) {
+            OutputWriter.ensureParentDir(config.getEventsPath());
+            events = Files.newBufferedWriter(Paths.get(config.getEventsPath()), StandardCharsets.US_ASCII);
             OutputWriter.writeEventsHeader(events, config);
-            SimulationRunner.run(config, state, writer, events);
+        }
+
+        try {
+            long executionTimeMs = SimulationRunner.run(config, state, writer, events);
+
+            if (config.getPropertiesPath() != null && !config.getPropertiesPath().isBlank()) {
+                OutputWriter.writeMetadata(config.getPropertiesPath(), config, executionTimeMs);
+            }
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+            if (events != null) {
+                events.close();
+            }
         }
     }
 }

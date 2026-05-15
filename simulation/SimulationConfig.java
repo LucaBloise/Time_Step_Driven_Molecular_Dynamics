@@ -16,6 +16,9 @@ public class SimulationConfig {
     private long seed = -1L;
     private String outPath = null;
     private String eventsPath = null;
+    private boolean noState = false;
+    private boolean noEvents = false;
+    private String propertiesPath = null;
 
     public static SimulationConfig fromArgs(String[] args) {
         SimulationConfig config = new SimulationConfig();
@@ -28,6 +31,22 @@ public class SimulationConfig {
                 continue;
             }
             String key = arg.substring(2);
+            switch (key) {
+                case "no-state" -> {
+                    config.noState = true;
+                    continue;
+                }
+                case "no-events" -> {
+                    config.noEvents = true;
+                    continue;
+                }
+                case "no-output" -> {
+                    config.noState = true;
+                    config.noEvents = true;
+                    continue;
+                }
+                default -> {}
+            }
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for --" + key);
             }
@@ -46,6 +65,7 @@ public class SimulationConfig {
                 case "seed" -> config.seed = Long.parseLong(value);
                 case "out" -> config.outPath = value;
                 case "events-out" -> config.eventsPath = value;
+                case "properties-out" -> config.propertiesPath = value;
                 default -> throw new IllegalArgumentException("Unknown option: --" + key);
             }
         }
@@ -141,6 +161,18 @@ public class SimulationConfig {
         return eventsPath;
     }
 
+    public boolean isNoState() {
+        return noState;
+    }
+
+    public boolean isNoEvents() {
+        return noEvents;
+    }
+
+    public String getPropertiesPath() {
+        return propertiesPath;
+    }
+
     public static void printUsageAndExit() {
         System.out.println("Usage: java ScanningRateSimulation [options]");
         System.out.println("Options:");
@@ -157,6 +189,10 @@ public class SimulationConfig {
         System.out.println("  --seed <value>       Random seed");
         System.out.println("  --out <path>         Output state file path");
         System.out.println("  --events-out <path>  Output events file path");
+        System.out.println("  --properties-out <path> Output properties/metadata file path");
+        System.out.println("  --no-state           Skip writing particle state output");
+        System.out.println("  --no-events          Skip writing transition events");
+        System.out.println("  --no-output          Skip all output (alias for --no-state --no-events)");
         System.exit(0);
     }
 }
