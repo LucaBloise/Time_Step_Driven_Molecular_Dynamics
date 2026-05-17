@@ -14,6 +14,13 @@ LABELS = {
     "gear5": "Gear 5",
     "analytic": "Analítica",
 }
+COLORS = {
+    "euler": "#1f77b4",
+    "verlet": "#ff7f0e",
+    "beeman": "#2ca02c",
+    "gear5": "#d62728",
+    "analytic": "black",
+}
 
 
 def parse_header_value(value):
@@ -167,6 +174,11 @@ def apply_axis_format(ax):
     ax.xaxis.set_major_formatter(formatter)
 
 
+def add_external_legend(fig, ax):
+    ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1.0), borderaxespad=0.0)
+    fig.tight_layout(rect=[0.0, 0.0, 0.80, 1.0])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot analytic vs numerical oscillator solutions.")
     parser.add_argument("--input-dir", default="outputs/oscillatorOutputs", help="Input directory with oscillator outputs")
@@ -269,33 +281,36 @@ def main():
 
     if args.full or not args.zoom:
         fig, ax = plt.subplots(figsize=(9, 5))
-        ax.plot(analytic_t, analytic_r_values, color="black", linewidth=2.0, label=LABELS["analytic"])
+        ax.plot(analytic_t, analytic_r_values, color=COLORS["analytic"], linewidth=2.0, label=LABELS["analytic"])
         for method in METHOD_ORDER:
-            ax.plot(per_method[method]["t"], per_method[method]["r"], label=LABELS.get(method, method))
+            ax.plot(
+                per_method[method]["t"],
+                per_method[method]["r"],
+                color=COLORS.get(method),
+                label=LABELS.get(method, method),
+            )
         apply_axis_format(ax)
-        ax.legend(frameon=False)
-        fig.tight_layout()
-        fig.savefig(f"{args.out_prefix}_full.png", dpi=200)
+        add_external_legend(fig, ax)
+        fig.savefig(f"{args.out_prefix}_full.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
     if args.zoom or not args.full:
         fig, ax = plt.subplots(figsize=(9, 5))
         analytic_t_zoom = np.linspace(zoom_start, zoom_end, 2000)
         analytic_r_zoom = analytic_r(analytic_t_zoom, m, k, gamma, r0, v0)
-        ax.plot(analytic_t_zoom, analytic_r_zoom, color="black", linewidth=2.0, label=LABELS["analytic"])
+        ax.plot(analytic_t_zoom, analytic_r_zoom, color=COLORS["analytic"], linewidth=2.0, label=LABELS["analytic"])
         for method in zoom_methods:
             t = per_method[method]["t"]
             r = per_method[method]["r"]
             msk = (t >= zoom_start) & (t <= zoom_end)
-            ax.plot(t[msk], r[msk], label=LABELS.get(method, method))
+            ax.plot(t[msk], r[msk], color=COLORS.get(method), label=LABELS.get(method, method))
         ax.set_xlim(zoom_start, zoom_end)
         ax.margins(x=0.0, y=0.0)
         if zoom_ylim is not None:
             ax.set_ylim(zoom_ylim)
         apply_axis_format(ax)
-        ax.legend(frameon=False)
-        fig.tight_layout()
-        fig.savefig(f"{args.out_prefix}_zoom.png", dpi=200)
+        add_external_legend(fig, ax)
+        fig.savefig(f"{args.out_prefix}_zoom.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
 
