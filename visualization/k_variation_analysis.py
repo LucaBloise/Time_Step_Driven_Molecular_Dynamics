@@ -628,7 +628,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="TP4 1.4: variación de k")
 
     parser.add_argument("--k-values", type=str, default="1e2,1e3,1e4")
-    parser.add_argument("--n-values", type=str, default="100,150,200,250,300,350,400,450,500,550,600,650,700,750")
+    parser.add_argument("--n-values", type=str, default="100,200,300,400,500,600,700,800,900,1000")
     parser.add_argument("--repetitions", type=int, default=5)
 
     parser.add_argument("--tf", type=float, default=1500.0)
