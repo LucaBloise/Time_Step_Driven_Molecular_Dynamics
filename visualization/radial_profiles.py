@@ -177,8 +177,8 @@ def parse_state_file_radial_profiles(
     if not state_path.exists():
         raise FileNotFoundError(f"No se encontró archivo de estados: {state_path}")
 
-    r_min = obstacle_radius + particle_radius
-    r_max = system_diameter / 2.0 - particle_radius
+    r_min = obstacle_radius
+    r_max = system_diameter
 
     s_centers, shell_areas = build_radial_bins(r_min=r_min, r_max=r_max, ds=ds)
     total_counts, total_sum_vr = empty_accumulators(len(s_centers))
@@ -701,13 +701,25 @@ def plot_profiles_with_colorbar(
     for ax in axes:
         ax.grid(True, alpha=0.25)
 
-    sm = ScalarMappable(norm=norm, cmap=cmap)
+        sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=axes, pad=0.02)
-    cbar.set_label("N")
 
-    fig.suptitle("Perfiles radiales de partículas frescas entrantes", y=0.995)
-    fig.subplots_adjust(left=0.14, right=0.88, top=0.95, bottom=0.08, hspace=0.18)
+    fig.subplots_adjust(
+        left=0.14,
+        right=0.82,
+        top=0.95,
+        bottom=0.08,
+        hspace=0.18,
+    )
+
+    cbar = fig.colorbar(
+        sm,
+        ax=axes,
+        fraction=0.035,
+        pad=0.04,
+        aspect=35,
+    )
+    cbar.set_label("N")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
@@ -812,7 +824,6 @@ def average_near_obstacle(
 
     return output
 
-
 def plot_near_obstacle_vs_n(
     near_stats: Sequence[NearObstacleStats],
     output_path: Path,
@@ -830,34 +841,75 @@ def plot_near_obstacle_vs_n(
     jin = [entry.jin_mean for entry in near_stats]
     jin_std = [entry.jin_std for entry in near_stats]
 
-    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+    fig, (ax_top, ax_bottom) = plt.subplots(
+        2,
+        1,
+        figsize=(10, 10),
+        sharex=True,
+    )
 
-    axes[0].errorbar(ns, rho, yerr=rho_std, fmt="o-", capsize=5)
-    axes[0].set_ylabel(r"$\langle \rho_{fin} \rangle$")
+    ax_top_rho = ax_top
+    ax_top_jin = ax_top.twinx()
 
-    axes[1].errorbar(ns, v_abs, yerr=v_std, fmt="s-", capsize=5)
-    axes[1].set_ylabel(r"$|\langle v_{fin} \rangle|$")
+    rho_plot = ax_top_rho.errorbar(
+        ns,
+        rho,
+        yerr=rho_std,
+        fmt="o-",
+        capsize=5,
+        label=r"$\langle \rho_{fin} \rangle$",
+    )
 
-    axes[2].errorbar(ns, jin, yerr=jin_std, fmt="^-", capsize=5)
-    axes[2].set_ylabel(r"$J_{in}$")
-    axes[2].set_xlabel("N")
+    jin_plot = ax_top_jin.errorbar(
+        ns,
+        jin,
+        yerr=jin_std,
+        fmt="s-",
+        capsize=5,
+        label=r"$J_{in}$",
+    )
 
-    for ax in axes:
-        ax.grid(True, alpha=0.25)
+    ax_top_rho.set_ylabel(r"$\langle \rho_{fin} \rangle$")
+    ax_top_jin.set_ylabel(r"$J_{in}$")
+
+    ax_top_rho.grid(True, alpha=0.25)
+
+    # leyenda combinada
+    handles = [rho_plot, jin_plot]
+    labels = [h.get_label() for h in handles]
+    ax_top_rho.legend(handles, labels, loc="upper left")
+
+    ax_bottom.errorbar(
+        ns,
+        v_abs,
+        yerr=v_std,
+        fmt="^-",
+        capsize=5,
+        label=r"$|\langle v_{fin} \rangle|$",
+    )
+
+    ax_bottom.set_ylabel(r"$|\langle v_{fin} \rangle|$")
+    ax_bottom.set_xlabel("N")
+    ax_bottom.grid(True, alpha=0.25)
 
     if near_stats:
         fig.suptitle(
             rf"Promedio cercano al obstáculo: "
             rf"$S\in[{near_stats[0].s_min},{near_stats[0].s_max}]$ m",
-            y=0.995,
+            y=0.98,
         )
 
-    fig.subplots_adjust(left=0.16, right=0.97, top=0.94, bottom=0.08, hspace=0.20)
+    fig.subplots_adjust(
+        left=0.12,
+        right=0.88,
+        top=0.93,
+        bottom=0.08,
+        hspace=0.18,
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
     plt.close(fig)
-
 
 def write_near_obstacle_csv(near_stats: Sequence[NearObstacleStats], output_csv: Path) -> None:
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -961,7 +1013,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--zoom-s-min", type=float, default=1.5)
     parser.add_argument("--zoom-s-max", type=float, default=5.0)
     parser.add_argument("--near-s-min", type=float, default=2.0)
-    parser.add_argument("--near-s-max", type=float, default=3.0)
+    parser.add_argument("--near-s-max", type=float, default=2.2)
 
     parser.add_argument("--only-plot", action="store_true")
 
