@@ -841,6 +841,10 @@ def plot_near_obstacle_vs_n(
     jin = [entry.jin_mean for entry in near_stats]
     jin_std = [entry.jin_std for entry in near_stats]
 
+    color_rho = "tab:blue"
+    color_jin = "tab:red"
+    color_v = "tab:green"
+
     fig, (ax_top, ax_bottom) = plt.subplots(
         2,
         1,
@@ -848,43 +852,45 @@ def plot_near_obstacle_vs_n(
         sharex=True,
     )
 
-    ax_top_rho = ax_top
-    ax_top_jin = ax_top.twinx()
-
-    rho_plot = ax_top_rho.errorbar(
+    # Arriba: rho y Jin en el mismo recuadro y con la misma escala
+    ax_top.errorbar(
         ns,
         rho,
         yerr=rho_std,
         fmt="o-",
         capsize=5,
+        linewidth=2.0,
+        color=color_rho,
+        ecolor=color_rho,
         label=r"$\langle \rho_{fin} \rangle$",
     )
 
-    jin_plot = ax_top_jin.errorbar(
+    ax_top.errorbar(
         ns,
         jin,
         yerr=jin_std,
         fmt="s-",
         capsize=5,
+        linewidth=2.0,
+        color=color_jin,
+        ecolor=color_jin,
         label=r"$J_{in}$",
     )
 
-    ax_top_rho.set_ylabel(r"$\langle \rho_{fin} \rangle$")
-    ax_top_jin.set_ylabel(r"$J_{in}$")
+    ax_top.set_ylabel(r"$\langle \rho_{fin} \rangle$, $J_{in}$")
+    ax_top.grid(True, alpha=0.25)
+    ax_top.legend(loc="upper left")
 
-    ax_top_rho.grid(True, alpha=0.25)
-
-    # leyenda combinada
-    handles = [rho_plot, jin_plot]
-    labels = [h.get_label() for h in handles]
-    ax_top_rho.legend(handles, labels, loc="upper left")
-
+    # Abajo: velocidad
     ax_bottom.errorbar(
         ns,
         v_abs,
         yerr=v_std,
         fmt="^-",
         capsize=5,
+        linewidth=2.0,
+        color=color_v,
+        ecolor=color_v,
         label=r"$|\langle v_{fin} \rangle|$",
     )
 
@@ -900,8 +906,8 @@ def plot_near_obstacle_vs_n(
         )
 
     fig.subplots_adjust(
-        left=0.12,
-        right=0.88,
+        left=0.14,
+        right=0.97,
         top=0.93,
         bottom=0.08,
         hspace=0.18,
