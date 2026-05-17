@@ -21,11 +21,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--n-start", type=int, default=100)
     parser.add_argument("--n-end", type=int, default=1000)
-    parser.add_argument("--n-step", type=int, default=50)
+    parser.add_argument("--n-step", type=int, default=100)
     parser.add_argument("--repetitions", type=int, default=5)
     parser.add_argument("--threads", type=int, default=5)
 
-    parser.add_argument("--tf", type=float, default=1500.0)
+    parser.add_argument("--tf", type=float, default=2000.0)
     parser.add_argument("--dt", type=float, default=0.001)
     parser.add_argument("--dt2", type=float, default=0.1)
 
