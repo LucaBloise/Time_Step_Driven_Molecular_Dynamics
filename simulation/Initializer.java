@@ -15,7 +15,9 @@ public class Initializer {
         double[] x = state.getX();
         double[] y = state.getY();
 
-        boolean placedRandomly = placeRandomly(config, x, y, outerRadius, innerRadius, random);
+        // Random sequential placement jams at high densities; use lattice-first for large N.
+        boolean useRandomFirst = n <= 700;
+        boolean placedRandomly = useRandomFirst && placeRandomly(config, x, y, outerRadius, innerRadius, random);
         if (!placedRandomly) {
             placeOnLattice(config, x, y, outerRadius, innerRadius, random);
         }
@@ -76,11 +78,43 @@ public class Initializer {
         double dx = 2.0 * r;
         double dy = Math.sqrt(3.0) * r;
 
+        List<Position> bestPositions = buildHexLatticePositions(outerRadius, innerRadius, dx, dy, 0.0, 0.0);
+
+        // Try multiple lattice offsets and keep the densest valid arrangement.
+        for (int attempt = 0; attempt < 32; attempt++) {
+            double shiftX = random.nextDouble() * dx;
+            double shiftY = random.nextDouble() * dy;
+            List<Position> candidate = buildHexLatticePositions(outerRadius, innerRadius, dx, dy, shiftX, shiftY);
+            if (candidate.size() > bestPositions.size()) {
+                bestPositions = candidate;
+            }
+        }
+
+        if (bestPositions.size() < config.getN()) {
+            throw new IllegalStateException(
+                    "Not enough lattice positions for N=" + config.getN() + " (max=" + bestPositions.size() + ")");
+        }
+
+        Collections.shuffle(bestPositions, random);
+        for (int i = 0; i < config.getN(); i++) {
+            Position p = bestPositions.get(i);
+            x[i] = p.x;
+            y[i] = p.y;
+        }
+    }
+
+    private static List<Position> buildHexLatticePositions(double outerRadius,
+                                                           double innerRadius,
+                                                           double dx,
+                                                           double dy,
+                                                           double shiftX,
+                                                           double shiftY) {
         List<Position> positions = new ArrayList<>();
         int row = 0;
-        for (double yy = -outerRadius; yy <= outerRadius; yy += dy) {
-            double offset = (row % 2 == 0) ? 0.0 : r;
-            for (double xx = -outerRadius + offset; xx <= outerRadius; xx += dx) {
+
+        for (double yy = -outerRadius + shiftY; yy <= outerRadius + 1e-12; yy += dy) {
+            double rowOffset = (row % 2 == 0) ? 0.0 : dx / 2.0;
+            for (double xx = -outerRadius + rowOffset + shiftX; xx <= outerRadius + 1e-12; xx += dx) {
                 double dist = Math.sqrt(xx * xx + yy * yy);
                 if (dist >= innerRadius && dist <= outerRadius) {
                     positions.add(new Position(xx, yy));
@@ -89,16 +123,7 @@ public class Initializer {
             row++;
         }
 
-        if (positions.size() < config.getN()) {
-            throw new IllegalStateException("Not enough lattice positions for N=" + config.getN());
-        }
-
-        Collections.shuffle(positions, random);
-        for (int i = 0; i < config.getN(); i++) {
-            Position p = positions.get(i);
-            x[i] = p.x;
-            y[i] = p.y;
-        }
+        return positions;
     }
 
     private static boolean isValidPosition(int count, double[] x, double[] y, double nx, double ny, double r) {
