@@ -142,7 +142,6 @@ def build_radial_bins(r_min: float, r_max: float, ds: float) -> Tuple[List[float
 def nearest_bin_index(values: Sequence[float], target: float) -> int:
     return min(range(len(values)), key=lambda i: abs(values[i] - target))
 
-
 def parse_state_file_s2(
     state_path: Path,
     r0: float,
@@ -162,19 +161,29 @@ def parse_state_file_s2(
     total_sum_vr = 0.0
     frame_count = 0
 
-    current_time = None
+    current_time: float | None = None
     current_particles: List[Tuple[float, float, float, float, str]] = []
 
-    def process_frame(time_value: float | None, particles: Sequence[Tuple[float, float, float, float, str]]) -> None:
+    def is_fresh_state(state: str) -> bool:
+        return state == "FRESH" or state == "1"
+
+    def process_frame(
+        time_value: float | None,
+        particles: Sequence[Tuple[float, float, float, float, str]],
+    ) -> None:
         nonlocal total_count, total_sum_vr, frame_count
 
-        if time_value is None or time_value < stationary_start:
+        if time_value is None:
+            return
+        if time_value < stationary_start:
+            return
+        if not particles:
             return
 
         frame_count += 1
 
         for x, y, vx, vy, state in particles:
-            if state != "FRESH":
+            if not is_fresh_state(state):
                 continue
 
             radial = math.hypot(x, y)
@@ -194,42 +203,38 @@ def parse_state_file_s2(
             total_sum_vr += vr
 
     with state_path.open("r", encoding="utf-8") as handle:
-        for raw_line in handle:
+        for line_number, raw_line in enumerate(handle, start=1):
             line = raw_line.strip()
+
             if not line or line.startswith("#"):
                 continue
 
             parts = line.split()
-            kind = parts[0]
 
-            if kind == "FRAME":
-                process_frame(current_time, current_particles)
-                current_particles = []
-
-                parsed_time = None
-                for token in parts[1:]:
-                    try:
-                        parsed_time = float(token)
-                    except ValueError:
-                        pass
-
-                current_time = parsed_time
+            # Ignora líneas raras tipo "0000 m"
+            if len(parts) < 7:
                 continue
 
-            if kind == "PARTICLE":
+            try:
+                time_value = float(parts[0])
+                # parts[1] = id
                 x = float(parts[2])
                 y = float(parts[3])
                 vx = float(parts[4])
                 vy = float(parts[5])
                 state = parts[6]
-                current_particles.append((x, y, vx, vy, state))
+            except ValueError:
                 continue
 
-            if kind == "END_FRAME":
+            if current_time is None:
+                current_time = time_value
+
+            if abs(time_value - current_time) > 1.0e-12:
                 process_frame(current_time, current_particles)
-                current_time = None
                 current_particles = []
-                continue
+                current_time = time_value
+
+            current_particles.append((x, y, vx, vy, state))
 
     process_frame(current_time, current_particles)
 

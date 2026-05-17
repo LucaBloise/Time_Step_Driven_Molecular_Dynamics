@@ -123,6 +123,8 @@ def build_radial_bins(r_min: float, r_max: float, ds: float) -> Tuple[List[float
 def empty_accumulators(n_bins: int) -> Tuple[List[int], List[float]]:
     return [0 for _ in range(n_bins)], [0.0 for _ in range(n_bins)]
 
+def is_fresh_state(state: str) -> bool:
+    return state == "FRESH" or state == "1"
 
 def accumulate_frame(
     particles: Sequence[Tuple[float, float, float, float, str]],
@@ -133,7 +135,7 @@ def accumulate_frame(
     total_sum_vr: List[float],
 ) -> None:
     for x, y, vx, vy, state in particles:
-        if state != "FRESH":
+        if not is_fresh_state(state):
             continue
 
         radial_distance = math.hypot(x, y)
@@ -301,6 +303,7 @@ def parse_state_file_radial_profiles(
 def run_single_simulation_tp4_states(
     repo_root: Path,
     run_dir: Path,
+    java_cmd: str,
     n_particles: int,
     tf_seconds: float,
     dt_seconds: float,
@@ -308,7 +311,6 @@ def run_single_simulation_tp4_states(
     seed: int,
     state_filename: str,
 ) -> Path:
-    java_cmd = "C:/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/jbr/bin/java.exe"
     if not os.path.exists(java_cmd):
         raise FileNotFoundError(f"Java executable not found: {java_cmd}")
 
@@ -335,7 +337,7 @@ def run_single_simulation_tp4_states(
         str(dt2_seconds),
         "--seed",
         str(seed),
-        "--state-out",
+        "--out",
         str(state_path),
         "--events-out",
         str(events_path),
@@ -361,7 +363,7 @@ def run_single_simulation_tp4_states(
     if not state_path.exists():
         raise FileNotFoundError(
             f"No se encontró archivo de estados {state_path}. "
-            "Revisar si el simulador Java usa otro flag distinto de --state-out."
+            "Revisar si el simulador Java usa otro flag distinto de --out."
         )
 
     return state_path
@@ -369,6 +371,7 @@ def run_single_simulation_tp4_states(
 
 def collect_radial_runs(
     repo_root: Path,
+    java_cmd: str,
     n_values: Sequence[int],
     repetitions: int,
     tf_seconds: float,
@@ -401,6 +404,7 @@ def collect_radial_runs(
             else:
                 state_path = run_single_simulation_tp4_states(
                     repo_root=repo_root,
+                    java_cmd=java_cmd,
                     run_dir=run_dir,
                     n_particles=n_particles,
                     tf_seconds=tf_seconds,
@@ -923,6 +927,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reuse-existing-runs", action="store_true")
 
     parser.add_argument(
+        "--java-cmd",
+        type=str,
+        default="C:/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/jbr/bin/java.exe",
+        help="Ruta al ejecutable de Java.",
+    )
+    parser.add_argument(
         "--out-csv",
         type=Path,
         default=repo_root / "outputs" / "radial_profiles_tp4" / "radial_runs.csv",
@@ -970,6 +980,7 @@ def main() -> None:
     else:
         runs = collect_radial_runs(
             repo_root=repo_root,
+            java_cmd=args.java_cmd,
             n_values=n_values,
             repetitions=args.repetitions,
             tf_seconds=args.tf,
