@@ -269,11 +269,12 @@ def write_stationary_summary(
 
 
 def plot_local_j_curves(
-    stats: Sequence[LocalJStats],
-    output_path: Path,
-    tolerance_fraction: float,
-    min_consecutive_windows: int,
-) -> None:
+    stats,
+    output_path,
+    tolerance_fraction,
+    min_consecutive_windows,
+    manual_stationary_time=None,
+):
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
@@ -322,21 +323,12 @@ def plot_local_j_curves(
         if t_est is not None:
             stationary_times.append(t_est)
 
-    if stationary_times:
-        conservative_t = max(stationary_times)
+    if manual_stationary_time is not None:
         ax.axvline(
-            conservative_t,
+            manual_stationary_time,
             color="black",
             linestyle="--",
             linewidth=2.0,
-            label=rf"$t_{{est}}$ conservador = {conservative_t:.1f} s",
-        )
-        ax.text(
-            conservative_t + 10,
-            0.95 * ax.get_ylim()[1],
-            rf"$t_{{est}} \approx {conservative_t:.0f}\ s$",
-            rotation=90,
-            va="top",
         )
 
     norm = mpl.colors.Normalize(vmin=n_min, vmax=n_max)
@@ -344,16 +336,16 @@ def plot_local_j_curves(
     sm.set_array([])
 
     cbar = fig.colorbar(sm, ax=ax, pad=0.02)
-    cbar.set_label("N")
+    cbar.set_label("N", fontsize=24)
 
-    ax.set_xlabel("Tiempo t (s)")
-    ax.set_ylabel(r"$J(t)$ local $(s^{-1})$")
+    ax.set_xlabel("Tiempo t (s)", fontsize=24)
+    ax.set_ylabel(r"$J(t)$ local $(s^{-1})$", fontsize=24)
     ax.grid(True, alpha=0.25)
 
-    ax.set_title(
-        rf"Tasa local de escaneo: ventana $\Delta T$; "
-        rf"criterio {100*tolerance_fraction:.0f}%"
-    )
+#    ax.set_title(
+#        rf"Tasa local de escaneo: ventana $\Delta T$; "
+#        rf"criterio {100*tolerance_fraction:.0f}%"
+#    )
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -424,6 +416,13 @@ def parse_args() -> argparse.Namespace:
         default=repo_root / "outputs" / "stationary_time_from_j.csv",
     )
 
+    parser.add_argument(
+        "--stationary-time",
+        type=float,
+        default=None,
+        help="Tiempo estacionario manual. Si se define, se dibuja esta línea.",
+    )
+    
     return parser.parse_args()
 
 
@@ -456,6 +455,7 @@ def main() -> None:
         output_path=args.out_figure,
         tolerance_fraction=args.tolerance_fraction,
         min_consecutive_windows=args.min_consecutive_windows,
+        manual_stationary_time=args.stationary_time,
     )
 
     print(f"Figura guardada en {args.out_figure}")

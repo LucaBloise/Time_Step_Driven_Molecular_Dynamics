@@ -539,8 +539,8 @@ def plot_j_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
             label=rf"$k={k_value:.0f}$"
         )
 
-    ax.set_xlabel("Número de partículas (N)", fontsize=14)
-    ax.set_ylabel(r"$\langle J \rangle$ $(s^{-1})$", fontsize=20)
+    ax.set_xlabel("Número de partículas (N)", fontsize=20)
+    ax.set_ylabel(r"$\langle J \rangle$ $(s^{-1})$", fontsize=24)
     ax.grid(True, alpha=0.3)
     ax.legend()
 
@@ -580,8 +580,8 @@ def plot_jin_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
             label=rf"$k={k_value:.0f}$"
         )
 
-    ax.set_xlabel("Número de partículas (N)", fontsize=14)
-    ax.set_ylabel(r"$\langle J_{in}|_{S\sim2} \rangle$", fontsize=20)
+    ax.set_xlabel("Número de partículas (N)", fontsize=20)
+    ax.set_ylabel(r"$\langle J_{in}|_{S\sim2} \rangle$", fontsize=24)
     ax.grid(True, alpha=0.3)
     ax.legend()
 
@@ -622,8 +622,8 @@ def plot_scalars_vs_k(
 
     ax.set_xscale("log")
 
-    ax.set_xlabel(r"$k$ $(N/m)$", fontsize=20)
-    ax.set_ylabel(r"Número de partículas (N)", fontsize=20)
+    ax.set_xlabel(r"$k$ $(N/m)$", fontsize=24)
+    ax.set_ylabel(r"Número de partículas (N)", fontsize=24)
 
     ax.tick_params(axis="both", labelsize=16)
 
