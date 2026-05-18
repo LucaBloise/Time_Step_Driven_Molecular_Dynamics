@@ -513,26 +513,36 @@ def plot_j_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
 
     k_values = sorted({p.k_value for p in points})
 
-    for k_value in k_values:
+    offsets = [-12, -6, 0, 6, 12]
+
+    for idx, k_value in enumerate(k_values):
+
         group = [p for p in points if p.k_value == k_value]
         ns = [p.n_particles for p in group]
+        # OFFSET VISUAL
+        shifted_ns = [n + offsets[idx] for n in ns]
+
         means = [p.j_mean for p in group]
         stds = [p.j_std for p in group]
 
         ax.errorbar(
-            ns,
+            shifted_ns,
             means,
             yerr=stds,
             marker="o",
             linewidth=2,
-            capsize=5,
+            markersize=5,
+            capsize=2,
+            elinewidth=1,
+            alpha=0.75,
+            errorevery=1,
             label=rf"$k={k_value:.0e}$",
         )
 
-    ax.set_xlabel("N")
-    ax.set_ylabel(r"$\langle J \rangle$ $(s^{-1})$")
+    ax.set_xlabel("Número de partículas (N)", fontsize=14)
+    ax.set_ylabel(r"$\langle J \rangle$ $(s^{-1})$", fontsize=20)
     ax.grid(True, alpha=0.3)
-#    ax.legend(title="Constante elástica")
+    ax.legend()
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -544,62 +554,89 @@ def plot_jin_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(10, 6))
 
     k_values = sorted({p.k_value for p in points})
+    offsets = [-12, -6, 0, 6, 12]
 
-    for k_value in k_values:
+    for idx, k_value in enumerate(k_values):
+
         group = [p for p in points if p.k_value == k_value]
         ns = [p.n_particles for p in group]
-        means = [p.jin_mean for p in group]
-        stds = [p.jin_std for p in group]
+        # OFFSET VISUAL
+        shifted_ns = [n + offsets[idx] for n in ns]
+
+        means = [p.j_mean for p in group]
+        stds = [p.j_std for p in group]
 
         ax.errorbar(
-            ns,
+            shifted_ns,
             means,
             yerr=stds,
-            marker="s",
+            marker="o",
             linewidth=2,
-            capsize=5,
+            markersize=5,
+            capsize=2,
+            elinewidth=1,
+            alpha=0.75,
+            errorevery=1,
             label=rf"$k={k_value:.0e}$",
         )
 
-    ax.set_xlabel("N")
-    ax.set_ylabel(r"$\langle J_{in}|_{S\sim2} \rangle$")
+    ax.set_xlabel("Número de partículas (N)", fontsize=14)
+    ax.set_ylabel(r"$\langle J_{in}|_{S\sim2} \rangle$", fontsize=20)
     ax.grid(True, alpha=0.3)
-#    ax.legend(title="Constante elástica")
+    ax.legend()
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
     plt.close(fig)
 
+def plot_scalars_vs_k(
+    summaries: Sequence[ScalarSummary],
+    output_path: Path,
+) -> None:
 
-def plot_scalars_vs_k(summaries: Sequence[ScalarSummary], output_path: Path) -> None:
     k_values = [s.k_value for s in summaries]
-    max_j = [s.max_j for s in summaries]
-    max_jin = [s.max_jin for s in summaries]
+
     n_star_j = [s.n_star_j for s in summaries]
     n_star_jin = [s.n_star_jin for s in summaries]
 
-    fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+    fig, ax = plt.subplots(figsize=(9, 6))
 
-    axes[0].plot(k_values, max_j, marker="o", linewidth=2, label=r"$\max \langle J \rangle$")
-    axes[0].plot(k_values, max_jin, marker="s", linewidth=2, label=r"$\max \langle J_{in} \rangle$")
-    axes[0].set_ylabel("Máximo de la curva")
-    axes[0].grid(True, alpha=0.3)
-    axes[0].legend()
+    ax.plot(
+        k_values,
+        n_star_j,
+        marker="o",
+        linestyle="--",
+        linewidth=2,
+        label=r"$N^*_J$",
+    )
 
-    axes[1].plot(k_values, n_star_j, marker="o", linewidth=2, label=r"$N^*_J$")
-    axes[1].plot(k_values, n_star_jin, marker="s", linewidth=2, label=r"$N^*_{Jin}$")
-    axes[1].set_xscale("log")
-    axes[1].set_xlabel(r"$k$ $(N/m)$")
-    axes[1].set_ylabel(r"$N^*$")
-    axes[1].grid(True, alpha=0.3)
-    axes[1].legend()
+    ax.plot(
+        k_values,
+        n_star_jin,
+        marker="s",
+        linestyle="--",
+        linewidth=2,
+        label=r"$N^*_{Jin}$",
+    )
 
-    axes[0].set_xscale("log")
+    ax.set_xscale("log")
+
+    ax.set_xlabel(r"$k$ $(N/m)$", fontsize=20)
+    ax.set_ylabel(r"$N^*$", fontsize=20)
+
+    ax.tick_params(axis="both", labelsize=16)
+
+    ax.grid(True, which="both", alpha=0.3)
+
+    ax.legend(fontsize=16)
 
     fig.tight_layout()
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     fig.savefig(output_path, dpi=200)
+
     plt.close(fig)
 
 

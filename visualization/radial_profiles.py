@@ -639,10 +639,12 @@ def filter_positive_curve(
 
     return fx, fy, fs
 
-
-def plot_profiles_with_colorbar(
+def plot_single_profile_with_colorbar(
     stats: Sequence[RadialProfileStats],
     output_path: Path,
+    value_getter,
+    std_getter,
+    ylabel: str,
 ) -> None:
     configure_plot_style()
 
@@ -650,86 +652,84 @@ def plot_profiles_with_colorbar(
     norm = Normalize(vmin=min(ns), vmax=max(ns))
     cmap = plt.colormaps["viridis"]
 
-    fig, axes = plt.subplots(3, 1, figsize=(11, 14), sharex=True)
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     for stat in stats:
         color = cmap(norm(stat.n_particles))
         s = list(stat.s_centers)
+        values = value_getter(stat)
+        stds = std_getter(stat)
 
-        rho = list(stat.rho_mean)
-        rho_std = list(stat.rho_std)
+        s_f, values_f, stds_f = filter_positive_curve(s, values, stds)
 
-        v_abs = [abs(v) for v in stat.v_mean]
-        v_std = list(stat.v_std)
-
-        jin = list(stat.jin_mean)
-        jin_std = list(stat.jin_std)
-
-        s_rho, rho_f, rho_s = filter_positive_curve(s, rho, rho_std)
-        if s_rho:
-            axes[0].plot(s_rho, rho_f, color=color, linewidth=1.8)
-            axes[0].fill_between(
-                s_rho,
-                [max(0.0, m - sd) for m, sd in zip(rho_f, rho_s)],
-                [m + sd for m, sd in zip(rho_f, rho_s)],
+        if s_f:
+            ax.plot(
+                s_f,
+                values_f,
+                color=color,
+                linewidth=1.8,
+            )
+            ax.fill_between(
+                s_f,
+                [max(0.0, m - sd) for m, sd in zip(values_f, stds_f)],
+                [m + sd for m, sd in zip(values_f, stds_f)],
                 color=color,
                 alpha=0.15,
             )
 
-        s_v, v_f, v_s = filter_positive_curve(s, v_abs, v_std)
-        if s_v:
-            axes[1].plot(s_v, v_f, color=color, linewidth=1.8)
-            axes[1].fill_between(
-                s_v,
-                [max(0.0, m - sd) for m, sd in zip(v_f, v_s)],
-                [m + sd for m, sd in zip(v_f, v_s)],
-                color=color,
-                alpha=0.15,
-            )
+    ax.set_xlabel("S (m)", fontsize=20)
+    ax.set_ylabel(ylabel, fontsize=20)
+    ax.tick_params(axis="both", labelsize=16)
+    ax.grid(True, alpha=0.25)
 
-        s_j, j_f, j_s = filter_positive_curve(s, jin, jin_std)
-        if s_j:
-            axes[2].plot(s_j, j_f, color=color, linewidth=1.8)
-            axes[2].fill_between(
-                s_j,
-                [max(0.0, m - sd) for m, sd in zip(j_f, j_s)],
-                [m + sd for m, sd in zip(j_f, j_s)],
-                color=color,
-                alpha=0.15,
-            )
-
-    axes[0].set_ylabel(r"$\langle \rho_{fin} \rangle(S)$")
-    axes[1].set_ylabel(r"$|\langle v_{fin} \rangle(S)|$")
-    axes[2].set_ylabel(r"$J_{in}(S)$")
-    axes[2].set_xlabel("S (m)")
-
-    for ax in axes:
-        ax.grid(True, alpha=0.25)
-
-        sm = ScalarMappable(norm=norm, cmap=cmap)
+    sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
-
-    fig.subplots_adjust(
-        left=0.14,
-        right=0.82,
-        top=0.95,
-        bottom=0.08,
-        hspace=0.18,
-    )
 
     cbar = fig.colorbar(
         sm,
-        ax=axes,
-        fraction=0.035,
+        ax=ax,
+        fraction=0.045,
         pad=0.04,
-        aspect=35,
     )
-    cbar.set_label("N")
+    cbar.set_label("N", fontsize=18)
+    cbar.ax.tick_params(labelsize=14)
+
+    fig.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
     plt.close(fig)
 
+
+def plot_profiles_with_colorbar(
+    stats: Sequence[RadialProfileStats],
+    output_path: Path,
+) -> None:
+    base_dir = output_path.parent
+
+    plot_single_profile_with_colorbar(
+        stats=stats,
+        output_path=base_dir / "rho_profiles_all_n.png",
+        value_getter=lambda stat: list(stat.rho_mean),
+        std_getter=lambda stat: list(stat.rho_std),
+        ylabel=r"$\langle \rho_{fin} \rangle(S)$",
+    )
+
+    plot_single_profile_with_colorbar(
+        stats=stats,
+        output_path=base_dir / "velocity_profiles_all_n.png",
+        value_getter=lambda stat: [abs(v) for v in stat.v_mean],
+        std_getter=lambda stat: list(stat.v_std),
+        ylabel=r"$|\langle v_{fin} \rangle(S)|$",
+    )
+
+    plot_single_profile_with_colorbar(
+        stats=stats,
+        output_path=base_dir / "jin_profiles_all_n.png",
+        value_getter=lambda stat: list(stat.jin_mean),
+        std_getter=lambda stat: list(stat.jin_std),
+        ylabel=r"$J_{in}(S)$",
+    )
 
 def plot_jin_zoom(
     stats: Sequence[RadialProfileStats],
@@ -773,8 +773,8 @@ def plot_jin_zoom(
             alpha=0.15,
         )
 
-    ax.set_xlabel("S (m)")
-    ax.set_ylabel(r"$J_{in}(S)$")
+    ax.set_xlabel("S (m)", fontsize=20)
+    ax.set_ylabel(r"$J_{in}(S)$", fontsize=20)
     ax.set_xlim(s_min, s_max)
     ax.grid(True, alpha=0.25)
 
@@ -882,7 +882,7 @@ def plot_near_obstacle_vs_n(
         label=r"$J_{in}$",
     )
 
-    ax_top.set_ylabel(r"$\langle \rho_{fin} \rangle$, $J_{in}$")
+    ax_top.set_ylabel(r"$\langle \rho_{fin} \rangle$, $J_{in}$", fontsize=24)
     ax_top.grid(True, alpha=0.25)
     ax_top.legend(loc="upper left")
 
@@ -899,8 +899,8 @@ def plot_near_obstacle_vs_n(
         label=r"$|\langle v_{fin} \rangle|$",
     )
 
-    ax_bottom.set_ylabel(r"$|\langle v_{fin} \rangle|$")
-    ax_bottom.set_xlabel("Número de partículas (N)")
+    ax_bottom.set_ylabel(r"$|\langle v_{fin} \rangle|$", fontsize=24)
+    ax_bottom.set_xlabel("Número de partículas (N)", fontsize=20)
     ax_bottom.grid(True, alpha=0.25)
 
     if near_stats:
