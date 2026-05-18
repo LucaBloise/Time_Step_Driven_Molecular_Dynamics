@@ -113,9 +113,10 @@ public class OscillatorSimulation {
         double r = params.r0;
         double v = params.v0;
         double a = accel(params, r, v);
+        double dt = params.dt;
 
         double nextOutputTime = 0.0;
-        int steps = (int) Math.ceil(params.tf / params.dt);
+        int steps = (int) Math.ceil(params.tf / dt);
 
         for (int step = 0; step <= steps; step++) {
             if (t + 1e-12 >= nextOutputTime) {
@@ -125,9 +126,13 @@ public class OscillatorSimulation {
             if (step == steps) {
                 break;
             }
-            r = r + v * params.dt;
-            v = v + a * params.dt;
-            t += params.dt;
+
+            double rNext = r + v * dt;
+            double vNext = v + a * dt;
+
+            r = rNext;
+            v = vNext;
+            t += dt;
             a = accel(params, r, v);
         }
     }

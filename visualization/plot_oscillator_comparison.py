@@ -1,6 +1,7 @@
 import argparse
 import math
 from pathlib import Path
+import subprocess
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,6 +22,81 @@ COLORS = {
     "gear5": "#d62728",
     "analytic": "black",
 }
+
+
+def format_dt_tag(dt):
+    return f"{dt:.10g}".replace(".", "p").replace("-", "m")
+
+
+def compile_simulation_sources(repo_root, javac_cmd):
+    simulation_dir = repo_root / "simulation"
+    java_files = sorted(simulation_dir.glob("*.java"))
+    if not java_files:
+        raise FileNotFoundError(f"No Java files found in {simulation_dir}")
+
+    cmd = [javac_cmd] + [str(path) for path in java_files]
+    process = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, check=False)
+    if process.returncode != 0:
+        raise RuntimeError(
+            "Compilation failed.\n"
+            f"Command: {' '.join(cmd)}\n"
+            f"STDOUT:\n{process.stdout}\n"
+            f"STDERR:\n{process.stderr}"
+        )
+
+
+def run_oscillator_outputs(repo_root, input_dir, args):
+    input_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.run_compile:
+        print("Compiling Java sources...", flush=True)
+        compile_simulation_sources(repo_root, args.javac_cmd)
+
+    run_dt2 = args.run_dt if args.run_dt2 is None else args.run_dt2
+    dt_tag = format_dt_tag(args.run_dt)
+
+    for method in METHOD_ORDER:
+        out_path = input_dir / f"{method}_dt{dt_tag}.txt"
+        if out_path.exists() and not args.run_force:
+            print(f"Reusing existing output for {method}: {out_path}", flush=True)
+            continue
+
+        cmd = [
+            args.java_cmd,
+            "-cp",
+            str(repo_root / "simulation"),
+            "OscillatorSimulation",
+            "--method",
+            method,
+            "--dt",
+            str(args.run_dt),
+            "--dt2",
+            str(run_dt2),
+            "--tf",
+            str(args.run_tf),
+            "--m",
+            str(args.run_m),
+            "--k",
+            str(args.run_k),
+            "--gamma",
+            str(args.run_gamma),
+            "--r0",
+            str(args.run_r0),
+            "--out",
+            str(out_path),
+        ]
+        if args.run_v0 is not None:
+            cmd.extend(["--v0", str(args.run_v0)])
+
+        print(f"Running {method} (dt={args.run_dt:g}) ...", flush=True)
+        process = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, check=False)
+        if process.returncode != 0:
+            raise RuntimeError(
+                f"Simulation failed for method={method}.\n"
+                f"Command: {' '.join(cmd)}\n"
+                f"STDOUT:\n{process.stdout}\n"
+                f"STDERR:\n{process.stderr}"
+            )
 
 
 def parse_header_value(value):
@@ -101,8 +177,8 @@ def find_common_dt(records, target_dt):
             raise ValueError(f"Requested dt={target_dt} not found for all methods.")
         dt_choice = target_dt
     else:
-        if 0.01 in common:
-            dt_choice = 0.01
+        if 0.001 in common:
+            dt_choice = 0.001
         else:
             dt_choice = min(common)
 
@@ -183,10 +259,23 @@ def main():
     parser = argparse.ArgumentParser(description="Plot analytic vs numerical oscillator solutions.")
     parser.add_argument("--input-dir", default="outputs/oscillatorOutputs", help="Input directory with oscillator outputs")
     parser.add_argument("--dt", type=float, default=None, help="Select outputs with this dt")
+    parser.add_argument("--run", action="store_true", help="Run oscillator simulations before plotting")
+    parser.add_argument("--run-force", action="store_true", help="When used with --run, overwrite existing outputs")
+    parser.add_argument("--run-compile", action="store_true", help="When used with --run, compile Java sources before simulation")
+    parser.add_argument("--java-cmd", default="java", help="Java executable")
+    parser.add_argument("--javac-cmd", default="javac", help="javac executable")
+    parser.add_argument("--run-dt", type=float, default=0.001, help="dt used by --run")
+    parser.add_argument("--run-dt2", type=float, default=None, help="dt2 used by --run (default: run-dt)")
+    parser.add_argument("--run-tf", type=float, default=5.0, help="tf used by --run")
+    parser.add_argument("--run-m", type=float, default=70.0, help="mass used by --run")
+    parser.add_argument("--run-k", type=float, default=1.0e4, help="spring constant used by --run")
+    parser.add_argument("--run-gamma", type=float, default=100.0, help="damping used by --run")
+    parser.add_argument("--run-r0", type=float, default=1.0, help="initial position used by --run")
+    parser.add_argument("--run-v0", type=float, default=None, help="initial velocity used by --run")
     parser.add_argument("--zoom", action="store_true", help="Save zoomed figure")
     parser.add_argument("--full", action="store_true", help="Save full-range figure")
     parser.add_argument("--out-prefix", default="oscillator_comparison", help="Output file prefix")
-    parser.add_argument("--zoom-include-euler", action="store_true", help="Include Euler in zoom plot")
+    parser.add_argument("--zoom-exclude-euler", action="store_true", help="Exclude Euler from zoom plot")
     parser.add_argument("--zoom-start", type=float, default=None, help="Zoom window start time (s)")
     parser.add_argument("--zoom-end", type=float, default=None, help="Zoom window end time (s)")
     parser.add_argument("--zoom-center", type=float, default=None, help="Zoom window center time (s)")
@@ -198,7 +287,21 @@ def main():
     parser.add_argument("--zoom-pad", type=float, default=0.1, help="Padding fraction for auto Y limits")
     args = parser.parse_args()
 
+    repo_root = Path(__file__).resolve().parent.parent
+    out_prefix = Path(args.out_prefix)
+    if not out_prefix.is_absolute():
+        out_prefix = repo_root / out_prefix
+    out_prefix.parent.mkdir(parents=True, exist_ok=True)
+
     input_dir = Path(args.input_dir)
+    if not input_dir.is_absolute():
+        input_dir = repo_root / input_dir
+
+    if args.run:
+        run_oscillator_outputs(repo_root, input_dir, args)
+        if args.dt is None:
+            args.dt = args.run_dt
+
     if not input_dir.exists():
         raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
@@ -231,11 +334,11 @@ def main():
         per_method[method] = {"t": t, "r": r, "ecm": ecm, "errors": errors}
         all_errors.append(np.abs(errors))
 
-    zoom_methods = METHOD_ORDER if args.zoom_include_euler else METHOD_ORDER[1:]
-    zoom_errors = []
-    for method in zoom_methods:
-        zoom_errors.append(np.abs(per_method[method]["errors"]))
-    zoom_errors = np.concatenate(zoom_errors) if zoom_errors else np.array([])
+    zoom_methods = METHOD_ORDER if not args.zoom_exclude_euler else METHOD_ORDER[1:]
+    # Keep t and error arrays aligned: the zoom center must be computed from
+    # one method's own time grid, not from concatenated errors of all methods.
+    zoom_reference_method = zoom_methods[0]
+    zoom_errors = np.abs(per_method[zoom_reference_method]["errors"])
     if (args.zoom_start is not None) ^ (args.zoom_end is not None):
         raise ValueError("Provide both --zoom-start and --zoom-end, or neither.")
     if (args.zoom_center is not None) ^ (args.zoom_window is not None):
@@ -251,7 +354,7 @@ def main():
         if args.zoom_center_bias is not None:
             center_bias = max(0.0, min(tf, args.zoom_center_bias * tf))
         zoom_start, zoom_end = compute_zoom_window(
-            per_method[zoom_methods[0]]["t"],
+            per_method[zoom_reference_method]["t"],
             zoom_errors,
             tf,
             args.zoom_points,
@@ -291,7 +394,7 @@ def main():
             )
         apply_axis_format(ax)
         add_external_legend(fig, ax)
-        fig.savefig(f"{args.out_prefix}_full.png", dpi=200, bbox_inches="tight")
+        fig.savefig(str(out_prefix.with_name(out_prefix.name + "_full.png")), dpi=200, bbox_inches="tight")
         plt.close(fig)
 
     if args.zoom or not args.full:
@@ -310,7 +413,7 @@ def main():
             ax.set_ylim(zoom_ylim)
         apply_axis_format(ax)
         add_external_legend(fig, ax)
-        fig.savefig(f"{args.out_prefix}_zoom.png", dpi=200, bbox_inches="tight")
+        fig.savefig(str(out_prefix.with_name(out_prefix.name + "_zoom.png")), dpi=200, bbox_inches="tight")
         plt.close(fig)
 
 
