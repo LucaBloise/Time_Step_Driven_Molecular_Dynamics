@@ -72,16 +72,7 @@ def format_k(k_value: float) -> str:
 
 
 def parse_event_line(parts: List[str]) -> Tuple[float, int, str] | None:
-    """Intenta leer una línea de events.txt.
 
-    Formato esperado principal:
-        t particle_id event_type ...
-
-    Ejemplo:
-        12.345 7 FRESH_TO_USED
-
-    Si tu archivo tiene otro orden, ajustar acá.
-    """
     if len(parts) < 3:
         return None
 
@@ -395,16 +386,16 @@ def plot_delta_t_vs_n(stats: Sequence[FirstReturnStats], output_path: Path) -> N
             ns,
             means,
             yerr=stds,
-            marker="o",
+            fmt="s--",
             linewidth=2,
             capsize=5,
             label=rf"$k={k_value:.0e}$",
         )
 
-    ax.set_xlabel("N")
+    ax.set_xlabel("Número de partículas (N)")
     ax.set_ylabel(r"$\Delta t_{\mathrm{retorno}}$ (s)")
     ax.grid(True, alpha=0.3)
-    ax.legend(title="Constante elástica")
+#    ax.legend(title="Constante elástica")
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -432,7 +423,7 @@ def plot_delta_t_vs_k(stats: Sequence[FirstReturnStats], output_path: Path) -> N
         k_values,
         means,
         yerr=stds,
-        marker="o",
+        fmt="s--",
         linewidth=2,
         capsize=5,
     )
@@ -455,15 +446,15 @@ def parse_args() -> argparse.Namespace:
         description="TP4 1.5: tiempo de retorno de la primera partícula usada."
     )
 
-    parser.add_argument("--k-values", type=str, default="1e2,1e3,1e4")
+    parser.add_argument("--k-values", type=str, default="1e2,1e3,1e4,1e5")
     parser.add_argument(
         "--n-values",
         type=str,
-        default="100,150,200,250,300,350,400,450,500,550,600,650,700,750",
+        default="100,200,300,400,500,600,700,800,900,1000",
     )
     parser.add_argument("--repetitions", type=int, default=5)
 
-    parser.add_argument("--tf", type=float, default=1500.0)
+    parser.add_argument("--tf", type=float, default=2000.0)
     parser.add_argument("--dt", type=float, default=0.001)
     parser.add_argument("--dt2", type=float, default=0.1)
     parser.add_argument("--seed-base", type=int, default=800000)

@@ -395,8 +395,13 @@ def collect_radial_runs(
     for n_particles in n_values:
         for repetition in range(1, repetitions + 1):
             seed = seed_base + n_particles * 1000 + repetition
-            run_dir = outputs_root / f"{run_prefix}_n{n_particles}_rep{repetition}"
+            run_prefix = run_prefix.strip()
 
+            if run_prefix:
+                run_dir = outputs_root / f"{run_prefix}_n{n_particles}_rep{repetition}"
+            else:
+                run_dir = outputs_root / f"n{n_particles}_rep{repetition}"
+                
             if reuse_existing_runs:
                 state_path = run_dir / state_filename
                 if not state_path.exists():
@@ -895,7 +900,7 @@ def plot_near_obstacle_vs_n(
     )
 
     ax_bottom.set_ylabel(r"$|\langle v_{fin} \rangle|$")
-    ax_bottom.set_xlabel("N")
+    ax_bottom.set_xlabel("Número de partículas (N)")
     ax_bottom.grid(True, alpha=0.25)
 
     if near_stats:

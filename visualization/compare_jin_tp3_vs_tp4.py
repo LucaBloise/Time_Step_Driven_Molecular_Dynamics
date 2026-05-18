@@ -162,7 +162,7 @@ def plot_jin_comparison(
         tp3_ns,
         tp3_means,
         yerr=tp3_stds,
-        fmt="s--",
+        fmt="o-",
         capsize=5,
         capthick=2,
         label="TP3 (Event-Driven)",
@@ -171,7 +171,7 @@ def plot_jin_comparison(
     )
 
     ax.set_xlabel("Número de partículas (N)")
-    ax.set_ylabel(r"$J_{in}$ en $S \in [2.0,2.2]$ m")
+    ax.set_ylabel(r"$J_{in}$")
     ax.grid(True, which="both", alpha=0.3)
     ax.legend()
 
@@ -179,7 +179,7 @@ def plot_jin_comparison(
         all_ns = sorted(set(tp3_ns + tp4_ns))
         min_n = min(all_ns)
         max_n = max(all_ns)
-        xticks = list(range(int(min_n), int(max_n) + 1, 50))
+        xticks = list(range(int(min_n), int(max_n) + 1, 100))
         if xticks:
             ax.set_xticks(xticks)
     except Exception:
@@ -229,11 +229,11 @@ def main() -> None:
     parser.add_argument(
         "--n-values",
         type=str,
-        default="100,150,200,250,300,350,400,450,500,550,600,650,700,750",
+        default="100,200,300,400,500,600,700,800,900,1000",
     )
     parser.add_argument("--repetitions", type=str, default="5")
-    parser.add_argument("--tp3-tf", type=str, default="1500")
-    parser.add_argument("--tp4-tf", type=str, default="1500")
+    parser.add_argument("--tp3-tf", type=str, default="2000")
+    parser.add_argument("--tp4-tf", type=str, default="2000")
     parser.add_argument("--s-min", type=float, default=2.0)
     parser.add_argument("--s-max", type=float, default=2.2)
     parser.add_argument("--force-run", action="store_true")

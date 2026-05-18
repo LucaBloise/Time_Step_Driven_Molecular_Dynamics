@@ -532,7 +532,7 @@ def plot_j_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
     ax.set_xlabel("N")
     ax.set_ylabel(r"$\langle J \rangle$ $(s^{-1})$")
     ax.grid(True, alpha=0.3)
-    ax.legend(title="Constante elástica")
+#    ax.legend(title="Constante elástica")
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -564,7 +564,7 @@ def plot_jin_vs_n(points: Sequence[AggregatedPoint], output_path: Path) -> None:
     ax.set_xlabel("N")
     ax.set_ylabel(r"$\langle J_{in}|_{S\sim2} \rangle$")
     ax.grid(True, alpha=0.3)
-    ax.legend(title="Constante elástica")
+#    ax.legend(title="Constante elástica")
 
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -627,14 +627,14 @@ def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(description="TP4 1.4: variación de k")
 
-    parser.add_argument("--k-values", type=str, default="1e2,1e3,1e4")
+    parser.add_argument("--k-values", type=str, default="1e2,1e3,1e4,1e5")
     parser.add_argument("--n-values", type=str, default="100,200,300,400,500,600,700,800,900,1000")
     parser.add_argument("--repetitions", type=int, default=5)
 
-    parser.add_argument("--tf", type=float, default=1500.0)
+    parser.add_argument("--tf", type=float, default=2000.0)
     parser.add_argument("--dt", type=float, default=0.001)
     parser.add_argument("--dt2", type=float, default=0.1)
-    parser.add_argument("--stationary-start", type=float, default=0.0)
+    parser.add_argument("--stationary-start", type=float, default=1400.0)
 
     parser.add_argument("--l", type=float, default=80.0)
     parser.add_argument("--r0", type=float, default=1.0)

@@ -2,7 +2,7 @@
 """Run a particle-count sweep for ScanningRateSimulation.
 
 Default sweep:
-- N from 100 to 1000 (step 50)
+- N from 100 to 1000 (step 100)
 - 5 repetitions per N
 """
 
