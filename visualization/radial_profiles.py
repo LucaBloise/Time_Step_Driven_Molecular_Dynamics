@@ -965,10 +965,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--n-values",
         type=str,
-        default="100,150,200,250,300,350,400,450,500,550,600,650,700,750",
+        default="100,200,300,400,500,600,700,800,900,1000",
     )
     parser.add_argument("--repetitions", type=int, default=5)
-    parser.add_argument("--tf", type=float, default=1500.0)
+    parser.add_argument("--tf", type=float, default=2000.0)
     parser.add_argument("--dt", type=float, default=0.001)
     parser.add_argument("--dt2", type=float, default=0.1)
     parser.add_argument("--seed-base", type=int, default=600000)
@@ -978,7 +978,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--particle-radius", type=float, default=1.0)
     parser.add_argument("--ds", type=float, default=0.2)
 
-    parser.add_argument("--stationary-start", type=float, default=0.0)
+    parser.add_argument("--stationary-start", type=float, default=1400.0)
 
     parser.add_argument(
         "--outputs-root",

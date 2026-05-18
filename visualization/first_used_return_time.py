@@ -19,6 +19,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -358,9 +359,11 @@ def aggregate_records(records: Sequence[FirstReturnRecord]) -> List[FirstReturnS
         )
 
     return stats
+def plot_delta_t_vs_n(
+    stats: Sequence[FirstReturnStats],
+    output_path: Path,
+) -> None:
 
-
-def plot_delta_t_vs_n(stats: Sequence[FirstReturnStats], output_path: Path) -> None:
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
@@ -376,42 +379,67 @@ def plot_delta_t_vs_n(stats: Sequence[FirstReturnStats], output_path: Path) -> N
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for k_value in k_values:
+    # offsets horizontales
+    offsets = np.linspace(-12, 12, len(k_values))
+
+    for offset, k_value in zip(offsets, k_values):
+
         group = [entry for entry in stats if entry.k_value == k_value]
-        ns = [entry.n_particles for entry in group]
+
+        ns = np.array([entry.n_particles for entry in group], dtype=float)
         means = [entry.mean_delta_t for entry in group]
         stds = [entry.std_delta_t for entry in group]
 
+        shifted_ns = ns + offset
+
         ax.errorbar(
-            ns,
+            shifted_ns,
             means,
             yerr=stds,
-            fmt="s--",
-            linewidth=2,
-            capsize=5,
-            label=rf"$k={k_value:.0e}$",
+            fmt="o-",
+            linewidth=1.8,
+            markersize=5,
+            capsize=3,
+            elinewidth=0.9,
+            capthick=0.9,
+            label=rf"$k={k_value:.0f}$"
         )
 
-    ax.set_xlabel("Número de partículas (N)")
-    ax.set_ylabel(r"$\Delta t_{\mathrm{retorno}}$ (s)")
+    ax.set_xlabel("Número de partículas (N)", fontsize=22)
+
+    ax.set_ylabel(
+        r"$\Delta t_{\mathrm{retorno}}$ (s)",
+        fontsize=22,
+    )
+
+    ax.tick_params(axis="both", labelsize=16)
+
     ax.grid(True, alpha=0.3)
-#    ax.legend(title="Constante elástica")
+
+    ax.legend(fontsize=14)
 
     fig.tight_layout()
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     fig.savefig(output_path, dpi=200)
+
     plt.close(fig)
-
-
-def plot_delta_t_vs_k(stats: Sequence[FirstReturnStats], output_path: Path) -> None:
+def plot_delta_t_vs_k(
+    stats: Sequence[FirstReturnStats],
+    output_path: Path,
+) -> None:
     """Promedia sobre N para obtener un escalar por k."""
+
     grouped: Dict[float, List[float]] = {}
 
     for entry in stats:
         grouped.setdefault(entry.k_value, []).append(entry.mean_delta_t)
 
     k_values = sorted(grouped.keys())
+
     means = [statistics.fmean(grouped[k]) for k in k_values]
+
     stds = [
         statistics.stdev(grouped[k]) if len(grouped[k]) > 1 else 0.0
         for k in k_values
@@ -423,21 +451,34 @@ def plot_delta_t_vs_k(stats: Sequence[FirstReturnStats], output_path: Path) -> N
         k_values,
         means,
         yerr=stds,
-        fmt="s--",
-        linewidth=2,
-        capsize=5,
+        fmt="o-",
+        linewidth=1.8,
+        markersize=5,
+        capsize=3,
+        elinewidth=0.9,
+        capthick=0.9,
     )
 
     ax.set_xscale("log")
-    ax.set_xlabel(r"$k$ (N/m)")
-    ax.set_ylabel(r"$\langle \Delta t_{\mathrm{retorno}} \rangle_N$ (s)")
+
+    ax.set_xlabel(r"$k$ (N/m)", fontsize=20)
+
+    ax.set_ylabel(
+        r"$\langle \Delta t_{\mathrm{retorno}} \rangle_N$ (s)",
+        fontsize=20,
+    )
+
+    ax.tick_params(axis="both", labelsize=16)
+
     ax.grid(True, which="both", alpha=0.3)
 
     fig.tight_layout()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=200)
-    plt.close(fig)
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig.savefig(output_path, dpi=200)
+
+    plt.close(fig)
 
 def parse_args() -> argparse.Namespace:
     repo_root = Path(__file__).resolve().parent.parent
